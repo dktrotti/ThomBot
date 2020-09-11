@@ -6,6 +6,8 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
+using System.Speech.Synthesis;
+using System.Speech.AudioFormat;
 
 namespace ThomBot
 {
@@ -48,9 +50,17 @@ namespace ThomBot
             Console.WriteLine("Connecting to voice channel...");
             var audioClient = await channel.ConnectAsync();
 
-            Console.WriteLine("Hello World!");
+            var synthesizer = new SpeechSynthesizer();
+            synthesizer.SetOutputToAudioStream(
+                audioClient.CreatePCMStream(AudioApplication.Voice),
+                new SpeechAudioFormatInfo(EncodingFormat.Pcm, 1000, 16, 1, 2000, 1, new byte[] { }));
 
-            throw new NotImplementedException();
+            while(true)
+            {
+                Console.WriteLine("What should Thomas say?");
+                var response = Console.ReadLine();
+                synthesizer.Speak(new Prompt(response));
+            }
         }
 
         private static T PromptSelection<T>(IEnumerable<T> choices, Func<T, string> ToString)
