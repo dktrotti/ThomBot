@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Speech.Synthesis;
 using System.Speech.AudioFormat;
+using System.ComponentModel;
+using Newtonsoft.Json;
 
 namespace ThomBot
 {
@@ -30,14 +32,16 @@ namespace ThomBot
                 secretsFilePath = "secrets.json";
             }
 
-            dynamic secrets = JObject.Parse(File.ReadAllText(secretsFilePath));
+            var definition = new { DiscordToken = "" };
+            var secrets = JsonConvert.DeserializeAnonymousType(File.ReadAllText(secretsFilePath), definition);
 
             using var client = new DiscordSocketClient();
-            await client.LoginAsync(Discord.TokenType.Bot, secrets.discordToken);
+            await client.LoginAsync(Discord.TokenType.Bot, secrets.DiscordToken);
             await client.StartAsync();
 
             client.Ready += () => Client_Ready(client);
 
+            await Task.Delay(-1);
         }
 
         private static async Task Client_Ready(DiscordSocketClient client)
