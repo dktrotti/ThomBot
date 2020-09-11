@@ -10,9 +10,16 @@ using System.Speech.Synthesis;
 using System.Speech.AudioFormat;
 using System.ComponentModel;
 using Newtonsoft.Json;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Diagnostics;
 
 namespace ThomBot
 {
+    /// <summary>
+    /// All of this is terrible code with no intention of being maintained.
+    /// </summary>
     class Program
     {
         static void Main(string[] args)
@@ -54,17 +61,50 @@ namespace ThomBot
             Console.WriteLine("Connecting to voice channel...");
             var audioClient = await channel.ConnectAsync();
 
-            var synthesizer = new SpeechSynthesizer();
-            synthesizer.SetOutputToAudioStream(
-                audioClient.CreatePCMStream(AudioApplication.Voice),
-                new SpeechAudioFormatInfo(EncodingFormat.Pcm, 1000, 16, 1, 2000, 1, new byte[] { }));
+            using var synthesizer = new SpeechSynthesizer();
+            using var discordStream = audioClient.CreatePCMStream(AudioApplication.Voice);
 
             while(true)
             {
+                synthesizer.SetOutputToWaveFile("temp.wav");
+
                 Console.WriteLine("What should Thomas say?");
                 var response = Console.ReadLine();
                 synthesizer.Speak(new Prompt(response));
+
+                {
+                    // From: https://docs.stillu.cc/guides/voice/sending-voice.html
+                    using var ffmpeg = CreateStream("temp.wav");
+                    using var output = ffmpeg.StandardOutput.BaseStream;
+                    using var error = ffmpeg.StandardError;
+
+                    var errors = error.ReadToEnd();
+                    if (errors.Length != 0)
+                    {
+                        Console.WriteLine(errors);
+                    }
+
+                    try { await output.CopyToAsync(discordStream); }
+                    finally { await discordStream.FlushAsync(); }
+                }
+
+                synthesizer.SetOutputToNull();
+                File.Delete("temp.wav");
             }
+        }
+
+        // From: https://docs.stillu.cc/guides/voice/sending-voice.html
+        private static Process CreateStream(string path)
+        {
+            return Process.Start(new ProcessStartInfo
+            {
+                FileName = "ffmpeg",
+                Arguments = $"-hide_banner -loglevel panic -i \"{path}\" -ac 2 -f s16le -ar 48000 pipe:1",
+                LoadUserProfile = true,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            });
         }
 
         private static T PromptSelection<T>(IEnumerable<T> choices, Func<T, string> ToString)
