@@ -76,13 +76,6 @@ namespace ThomBot
                     // From: https://docs.stillu.cc/guides/voice/sending-voice.html
                     using var ffmpeg = CreateStream("temp.wav");
                     using var output = ffmpeg.StandardOutput.BaseStream;
-                    using var error = ffmpeg.StandardError;
-
-                    var errors = error.ReadToEnd();
-                    if (errors.Length != 0)
-                    {
-                        Console.WriteLine(errors);
-                    }
 
                     try { await output.CopyToAsync(discordStream); }
                     finally { await discordStream.FlushAsync(); }
@@ -102,8 +95,8 @@ namespace ThomBot
                 Arguments = $"-hide_banner -loglevel panic -i \"{path}\" -ac 2 -f s16le -ar 48000 pipe:1",
                 LoadUserProfile = true,
                 UseShellExecute = false,
+                CreateNoWindow = true,
                 RedirectStandardOutput = true,
-                RedirectStandardError = true,
             });
         }
 
