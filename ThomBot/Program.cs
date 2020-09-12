@@ -14,6 +14,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Diagnostics;
+using Discord;
 
 namespace ThomBot
 {
@@ -55,10 +56,16 @@ namespace ThomBot
         {
             try
             {
+
                 Console.WriteLine("Selecting guild...");
                 var guild = PromptSelection(client.Guilds, g => g.Name);
                 Console.WriteLine("Selecting voice channel...");
                 var channel = PromptSelection(guild.VoiceChannels, ch => ch.Name);
+
+                Console.WriteLine("Setting nickname...");
+                await guild.CurrentUser.ModifyAsync(u => {
+                    u.Nickname = "groupsex fo telmaH";
+                });
 
                 Console.WriteLine("Connecting to voice channel...");
                 var audioClient = await channel.ConnectAsync();
