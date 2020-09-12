@@ -64,6 +64,9 @@ namespace ThomBot
             using var synthesizer = new SpeechSynthesizer();
             using var discordStream = audioClient.CreatePCMStream(AudioApplication.Voice);
 
+            var voice = PromptSelection(synthesizer.GetInstalledVoices(), v => v.VoiceInfo.Name);
+            synthesizer.SelectVoice(voice.VoiceInfo.Name);
+
             while(true)
             {
                 synthesizer.SetOutputToWaveFile("temp.wav");
