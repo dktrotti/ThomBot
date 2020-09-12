@@ -53,39 +53,50 @@ namespace ThomBot
 
         private static async Task Client_Ready(DiscordSocketClient client)
         {
-            Console.WriteLine("Selecting guild...");
-            var guild = PromptSelection(client.Guilds, g => g.Name);
-            Console.WriteLine("Selecting voice channel...");
-            var channel = PromptSelection(guild.VoiceChannels, ch => ch.Name);
-
-            Console.WriteLine("Connecting to voice channel...");
-            var audioClient = await channel.ConnectAsync();
-
-            using var synthesizer = new SpeechSynthesizer();
-            using var discordStream = audioClient.CreatePCMStream(AudioApplication.Voice);
-
-            var voice = PromptSelection(synthesizer.GetInstalledVoices(), v => v.VoiceInfo.Name);
-            synthesizer.SelectVoice(voice.VoiceInfo.Name);
-
-            while(true)
+            try
             {
-                synthesizer.SetOutputToWaveFile("temp.wav");
+                Console.WriteLine("Selecting guild...");
+                var guild = PromptSelection(client.Guilds, g => g.Name);
+                Console.WriteLine("Selecting voice channel...");
+                var channel = PromptSelection(guild.VoiceChannels, ch => ch.Name);
 
-                Console.WriteLine("What should Thomas say?");
-                var response = Console.ReadLine();
-                synthesizer.Speak(new Prompt(response));
+                Console.WriteLine("Connecting to voice channel...");
+                var audioClient = await channel.ConnectAsync();
 
+                using var synthesizer = new SpeechSynthesizer();
+                using var discordStream = audioClient.CreatePCMStream(AudioApplication.Voice);
+
+                var voice = PromptSelection(synthesizer.GetInstalledVoices(), v => v.VoiceInfo.Name);
+                synthesizer.SelectVoice(voice.VoiceInfo.Name);
+
+                while (true)
                 {
-                    // From: https://docs.stillu.cc/guides/voice/sending-voice.html
-                    using var ffmpeg = CreateStream("temp.wav");
-                    using var output = ffmpeg.StandardOutput.BaseStream;
+                    synthesizer.SetOutputToWaveFile("temp.wav");
 
-                    try { await output.CopyToAsync(discordStream); }
-                    finally { await discordStream.FlushAsync(); }
+                    Console.WriteLine("What should Thomas say?");
+                    var response = Console.ReadLine();
+                    synthesizer.Speak(new Prompt(response));
+
+                    {
+                        // From: https://docs.stillu.cc/guides/voice/sending-voice.html
+                        using var ffmpeg = CreateStream("temp.wav");
+                        using var output = ffmpeg.StandardOutput.BaseStream;
+
+                        try { await output.CopyToAsync(discordStream); }
+                        finally { await discordStream.FlushAsync(); }
+                    }
+
+                    synthesizer.SetOutputToNull();
+                    File.Delete("temp.wav");
                 }
+            }
+            catch (Exception e)
+            {
+                // Exceptions are swallowed unless caught here
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
 
-                synthesizer.SetOutputToNull();
-                File.Delete("temp.wav");
+                throw;
             }
         }
 
